@@ -1,6 +1,6 @@
-package me.yoursole.main.Game;
+package me.yoursole.main.game;
 
-import me.yoursole.main.Resources.Player;
+import me.yoursole.main.resources.Player;
 
 import javax.swing.*;
 import java.util.Timer;

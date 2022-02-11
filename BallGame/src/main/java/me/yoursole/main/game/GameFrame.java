@@ -1,7 +1,6 @@
-package me.yoursole.main.Game;
+package me.yoursole.main.game;
 
-import me.yoursole.main.Resources.Player;
-import me.yoursole.main.Resources.RectObject;
+import me.yoursole.main.resources.RectObject;
 
 import javax.swing.*;
 import java.awt.*;
@@ -27,7 +26,8 @@ class GameFrameMainPanel extends GamePanel{
         super(50, 0,0);
 
 
-        if(!((double)(this.dimx)/(double)(this.dimy)==(double)(this.dimxI)/(double)(this.dimyI))){
+        if(!((double)(this.dimx)/(double)(this.dimy)==(double)(this.dimxI)/(double)(this.dimyI)) &&
+                (this.dimxI > this.dimx || this.dimyI > this.dimy)){
             //if aspect ratio isn't correct for whatever reason
 
             if(this.dimyI>this.dimy){
@@ -38,18 +38,20 @@ class GameFrameMainPanel extends GamePanel{
             this.dimx *= this.compression;
             this.dimy *= this.compression;
 
+
+            for(RectObject r : this.objects){ //scale rectangles to match screensize
+                r.setXys(
+                        (int)(r.getXyLower()[0]*((double)this.dimx/(double)this.dimxI)),
+                        (int)(r.getXyLower()[1]*((double)this.dimy/(double)this.dimyI)),
+                        (int)(r.getXyUpper()[0]*((double)this.dimx/(double)this.dimxI)),
+                        (int)(r.getXyUpper()[1]*((double)this.dimy/(double)this.dimyI))
+                );
+            }
         }
         this.setPreferredSize(new Dimension(this.dimx, this.dimy));
 
 
-        for(RectObject r : this.objects){ //scale rectangles to match screensize
-            r.setXys(
-                    (int)(r.getXyLower()[0]*((double)this.dimx/(double)this.dimxI)),
-                    (int)(r.getXyLower()[1]*((double)this.dimy/(double)this.dimyI)),
-                    (int)(r.getXyUpper()[0]*((double)this.dimx/(double)this.dimxI)),
-                    (int)(r.getXyUpper()[1]*((double)this.dimy/(double)this.dimyI))
-            );
-        }
+
 
 
     }
@@ -107,6 +109,7 @@ class GameFrameMainPanel extends GamePanel{
         add(new RectObject(500,500,600,600,0f, true, true, 15, false, true,()->{
 
         }));
+
     }};
 
     private Point respawn = new Point(50,50);
@@ -134,9 +137,8 @@ class GameFrameMainPanel extends GamePanel{
     @Override
     public void onTick() {
 
-        if(!this.isPaused){
-            this.levelTime++;
-        }
+        if(!this.isPaused)this.levelTime++;
+
         this.time++;
 
         this.repaint();
@@ -197,8 +199,8 @@ class GameFrameMainPanel extends GamePanel{
         float dx = this.player.getX();
         float dy = this.player.getY();
 
-        dx = dx + (distancex(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
-        dy = dy + (distancey(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
+        dx += (distancex(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
+        dy += (distancey(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
 
         dx/=1.1;
         dy/=1.1;

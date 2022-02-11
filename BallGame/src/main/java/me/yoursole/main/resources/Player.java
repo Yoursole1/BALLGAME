@@ -1,4 +1,4 @@
-package me.yoursole.main.Resources;
+package me.yoursole.main.resources;
 
 public class Player extends Vector{
     private int size;

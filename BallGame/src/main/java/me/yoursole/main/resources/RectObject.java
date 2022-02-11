@@ -1,6 +1,4 @@
-package me.yoursole.main.Resources;
-
-import java.util.function.Consumer;
+package me.yoursole.main.resources;
 
 public class RectObject{
     private int[] xyLower;
