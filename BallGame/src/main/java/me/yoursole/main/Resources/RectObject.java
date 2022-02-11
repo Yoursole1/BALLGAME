@@ -29,6 +29,11 @@ public class RectObject{
         this.r = custom;
     }
 
+    public void setXys(int x1, int y1, int x2, int y2){
+        this.xyLower = new int[]{x1, y1};
+        this.xyUpper = new int[]{x2, y2};
+    }
+
     public int[] getXyLower(){
         return this.xyLower;
     }

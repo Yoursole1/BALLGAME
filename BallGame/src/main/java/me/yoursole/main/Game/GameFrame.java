@@ -22,10 +22,36 @@ public class GameFrame extends JFrame {
 }
 
 class GameFrameMainPanel extends GamePanel{
-
+    double compression;
     public GameFrameMainPanel(){
         super(50, 0,0);
+
+
+        if(!((double)(this.dimx)/(double)(this.dimy)==(double)(this.dimxI)/(double)(this.dimyI))){
+            //if aspect ratio isn't correct for whatever reason
+
+            if(this.dimyI>this.dimy){
+                this.compression = (double) (this.dimy) / (double) (this.dimyI);
+            }else{ //why are you having an issue on the x direction??? Whatever ill fix it but cmon how does this happen
+                this.compression = (double) (this.dimx) / (double) (this.dimxI);
+            }
+            this.dimx *= this.compression;
+            this.dimy *= this.compression;
+
+        }
         this.setPreferredSize(new Dimension(this.dimx, this.dimy));
+
+
+        for(RectObject r : this.objects){ //scale rectangles to match screensize
+            r.setXys(
+                    (int)(r.getXyLower()[0]*((double)this.dimx/(double)this.dimxI)),
+                    (int)(r.getXyLower()[1]*((double)this.dimy/(double)this.dimyI)),
+                    (int)(r.getXyUpper()[0]*((double)this.dimx/(double)this.dimxI)),
+                    (int)(r.getXyUpper()[1]*((double)this.dimy/(double)this.dimyI))
+            );
+        }
+
+
     }
 
     @Override
@@ -86,8 +112,15 @@ class GameFrameMainPanel extends GamePanel{
     private Point respawn = new Point(50,50);
 
     private boolean playerKills = false;
-    private int dimx = 1500;
-    private int dimy = 1000;
+    private Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    private int dimx = screenSize.width;
+    private int dimy = screenSize.height;
+
+    private int dimxI = 1500; //Ideal width
+    private int dimyI = 1000; //Ideal height
+
+
+
 
     //Player size set to 50
     //playerSize is up in the constructor under the super call
@@ -113,7 +146,12 @@ class GameFrameMainPanel extends GamePanel{
         this.player.setLocy((int) (this.player.getLocy()+this.player.getY()));
 
         Point mouse = MouseInfo.getPointerInfo().getLocation();
-        Point window = this.getLocationOnScreen();
+
+        Point window = new Point();
+        try{
+            window = this.getLocationOnScreen();
+        }catch(IllegalComponentStateException ignored){}
+
 
 
         Point rel = new Point(mouse.x-window.x, mouse.y-window.y);
@@ -140,135 +178,123 @@ class GameFrameMainPanel extends GamePanel{
         }
 
         if(inWindow(rel)){
-            float dx = this.player.getX();
-            float dy = this.player.getY();
-
-            dx = dx + (distancex(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
-            dy = dy + (distancey(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
-
-            dx/=1.1;
-            dy/=1.1;
-
-            this.player.setX(dx);
-            this.player.setY(dy);
+            applyMovement(rel);
         }else{
             killPlayer();
             return;
         }
 
+        collideWithWall();
+
+        for(RectObject r : this.objects){
+            if (collideWithBoxes(r)) return;
+        }
 
 
+    }
 
-        //collision with wall
+    private void applyMovement(Point rel) {
+        float dx = this.player.getX();
+        float dy = this.player.getY();
+
+        dx = dx + (distancex(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
+        dy = dy + (distancey(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
+
+        dx/=1.1;
+        dy/=1.1;
+
+        this.player.setX(dx);
+        this.player.setY(dy);
+    }
+
+    private boolean collideWithBoxes(RectObject r) {
+        if(withinX(r, 0, this.player.getLocx())){
+            if(withinY(r.getXyLower(), 1, this.player.getLocy())){
+
+                if (boxFunctions(r)) return true;
+
+                if(r.isCollidable()){
+                    this.player.setY(this.player.getY()*-1* r.getBouncyness());
+                    this.player.setLocy((int) (r.getXyLower()[1]-this.player.getSize()/2f));
+                }
+
+            }
+            if(withinY(r.getXyUpper(), 1, this.player.getLocy())){
+
+                if (boxFunctions(r)) return true;
+
+                if(r.isCollidable()){
+                    this.player.setY(this.player.getY()*-1* r.getBouncyness());
+                    this.player.setLocy((int) (r.getXyUpper()[1]+this.player.getSize()/2f));
+                }
+
+            }
+        }
+
+
+        if(withinX(r, 1, this.player.getLocy())){
+            if(withinY(r.getXyLower(), 0, this.player.getLocx())){
+
+                if (boxFunctions(r)) return true;
+
+                if(r.isCollidable()){
+                    this.player.setX(this.player.getX()*-1* r.getBouncyness());
+                    this.player.setLocx((int) (r.getXyLower()[0]-this.player.getSize()/2f-this.compression));
+                }
+
+
+            }
+            if(withinY(r.getXyUpper(), 0, this.player.getLocx())){
+
+                if (boxFunctions(r)) return true;
+
+                if(r.isCollidable()){
+                    this.player.setX(this.player.getX()*-1* r.getBouncyness());
+                    this.player.setLocx((int) (r.getXyUpper()[0]+this.player.getSize()/2f + this.compression));
+                }
+
+
+            }
+        }
+        return false;
+    }
+
+    private boolean boxFunctions(RectObject r) {
+        if (r.isWinner()) {
+            this.isPaused = true;
+            this.player.setX(0);
+            this.player.setY(0);
+        }
+        if (r.getSizeSet() != -1) {
+            this.player.setSize((int) (r.getSizeSet() * this.compression));
+        }
+        if (r.isKills()) {
+            killPlayer();
+            return true;
+        }
+        r.runFunc();
+        return false;
+    }
+
+    private boolean withinY(int[] xyLower, int i, double locx) {
+        return Math.abs(xyLower[i] - locx) < this.player.getSize() / 2f;
+    }
+
+    private boolean withinX(RectObject r, int i, double locx) {
+        return withinY(r.getXyLower(), i, locx) || locx > r.getXyLower()[i] && locx < r.getXyUpper()[i];
+    }
+
+    private void collideWithWall() {
         float halfSize = player.getSize()/2f;
-        if(this.player.getLocx()+halfSize>=this.dimx || this.player.getLocx() - halfSize < 0){
+        if(this.player.getLocx()+halfSize>=this.dimx || this.player.getLocx() - halfSize < 0){ //side wall
             this.player.setX(this.player.getX()*-1);
             this.player.setLocx(this.player.getLocx()<this.dimx/2f? (int) (this.player.getSize() / 2f) : (int) (this.dimx - this.player.getSize() / 2f));
         }
 
-        if(this.player.getLocy()+halfSize>=this.dimy || this.player.getLocy() - halfSize < 0){
+        if(this.player.getLocy()+halfSize>=this.dimy || this.player.getLocy() - halfSize < 0){ //top/bottom wall
             this.player.setY(this.player.getY()*-1);
-            this.player.setLocy((int) (this.player.getLocy()<this.dimy/2f?this.player.getSize()/2f:this.dimy-this.player.getSize()/2f));
+            this.player.setLocy((int) (this.player.getLocy()<this.dimy/2f?this.player.getSize()/2f+(this.compression):this.dimy-this.player.getSize()/2f-(this.compression)));
         }
-
-        //collision with boxes
-        for(RectObject r : this.objects){
-            if(Math.abs(r.getXyLower()[0]-this.player.getLocx())<this.player.getSize()/2f || this.player.getLocx()>r.getXyLower()[0] && this.player.getLocx()<r.getXyUpper()[0]){
-                if(Math.abs(r.getXyLower()[1]-this.player.getLocy())<this.player.getSize()/2f ){
-                    //JOKE
-                    if(r.isWinner()){
-                        this.isPaused = true;
-                        this.player.setX(0);
-                        this.player.setY(0);
-                    }
-                    if(r.getSizeSet()!=-1){
-                        this.player.setSize(r.getSizeSet());
-                    }
-                    if(r.isKills()){
-                        killPlayer();
-                        return;
-                    }
-                    //--------
-                    if(r.isCollidable()){
-                        this.player.setY(this.player.getY()*-1*r.getBouncyness());
-                        this.player.setLocy((int) (r.getXyLower()[1]-this.player.getSize()/2f));
-                    }
-                    r.runFunc();
-                }
-                if(Math.abs(r.getXyUpper()[1]-this.player.getLocy())<this.player.getSize()/2f){
-                    //JOKE
-                    if(r.isWinner()){
-                        this.isPaused = true;
-                        this.player.setX(0);
-                        this.player.setY(0);
-                    }
-                    if(r.getSizeSet()!=-1){
-                        this.player.setSize(r.getSizeSet());
-                    }
-                    if(r.isKills()){
-                        killPlayer();
-                        return;
-                    }
-                    //--------
-                    if(r.isCollidable()){
-                        this.player.setY(this.player.getY()*-1*r.getBouncyness());
-                        this.player.setLocy((int) (r.getXyUpper()[1]+this.player.getSize()/2f));
-                    }
-                    r.runFunc();
-                }
-            }
-
-
-            if(Math.abs(r.getXyLower()[1]-this.player.getLocy())<this.player.getSize()/2f || this.player.getLocy()>r.getXyLower()[1] && this.player.getLocy()<r.getXyUpper()[1]){
-                if(Math.abs(r.getXyLower()[0]-this.player.getLocx())<this.player.getSize()/2f){
-                    //JOKE
-                    if(r.isWinner()){
-                        this.isPaused = true;
-                        this.player.setX(0);
-                        this.player.setY(0);
-                    }
-                    if(r.getSizeSet()!=-1){
-                        this.player.setSize(r.getSizeSet());
-                    }
-                    if(r.isKills()){
-                        killPlayer();
-                        return;
-                    }
-                    //--------
-                    if(r.isCollidable()){
-                        this.player.setX(this.player.getX()*-1*r.getBouncyness());
-                        this.player.setLocx((int) (r.getXyLower()[0]-this.player.getSize()/2f));
-                    }
-                    r.runFunc();
-
-                }
-                if(Math.abs(r.getXyUpper()[0]-this.player.getLocx())<this.player.getSize()/2f){
-                    //JOKE
-                    if(r.isWinner()){
-                        this.isPaused = true;
-                        this.player.setX(0);
-                        this.player.setY(0);
-                    }
-                    if(r.getSizeSet()!=-1){
-                        this.player.setSize(r.getSizeSet());
-                    }
-                    if(r.isKills()){
-                        killPlayer();
-                        return;
-                    }
-                    //--------
-                    if(r.isCollidable()){
-                        this.player.setX(this.player.getX()*-1*r.getBouncyness());
-                        this.player.setLocx((int) (r.getXyUpper()[0]+this.player.getSize()/2f));
-                    }
-                    r.runFunc();
-
-                }
-            }
-
-        }
-
-
     }
 
 
@@ -281,7 +307,7 @@ class GameFrameMainPanel extends GamePanel{
         this.isPlaying = false;
         this.levelTime = 0;
 
-        this.player.setSize(this.player.getDefaultSize());
+        this.player.setSize((int) (this.player.getDefaultSize() * this.compression));
     }
 
     private float distance(double x, double y, double x2, double y2){
