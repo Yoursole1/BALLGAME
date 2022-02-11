@@ -7,7 +7,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public abstract class GamePanel extends JPanel {
-    protected Player player;
+    transient protected Player player;
     protected int dimx;
     protected int dimy;
 

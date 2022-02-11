@@ -1,5 +1,6 @@
 package me.yoursole.main.game;
 
+import me.yoursole.main.resources.Level;
 import me.yoursole.main.resources.RectObject;
 
 import javax.swing.*;
@@ -26,25 +27,25 @@ class GameFrameMainPanel extends GamePanel{
         super(50, 0,0);
 
 
-        if(!((double)(this.dimx)/(double)(this.dimy)==(double)(this.dimxI)/(double)(this.dimyI)) &&
-                (this.dimxI > this.dimx || this.dimyI > this.dimy)){
+        if(!((double)(this.dimx)/(double)(this.dimy)==(double)(this.l.getDimxI())/(double)(this.l.getDimyI())) &&
+                (this.l.getDimxI() > this.dimx || this.l.getDimyI() > this.dimy)){
             //if aspect ratio isn't correct for whatever reason
 
-            if(this.dimyI>this.dimy){
-                this.compression = (double) (this.dimy) / (double) (this.dimyI);
+            if(this.l.getDimyI()>this.dimy){
+                this.compression = (double) (this.dimy) / (double) (this.l.getDimyI());
             }else{ //why are you having an issue on the x direction??? Whatever ill fix it but cmon how does this happen
-                this.compression = (double) (this.dimx) / (double) (this.dimxI);
+                this.compression = (double) (this.dimx) / (double) (this.l.getDimxI());
             }
             this.dimx *= this.compression;
             this.dimy *= this.compression;
 
 
-            for(RectObject r : this.objects){ //scale rectangles to match screensize
+            for(RectObject r : this.l.getObjects()){ //scale rectangles to match screensize
                 r.setXys(
-                        (int)(r.getXyLower()[0]*((double)this.dimx/(double)this.dimxI)),
-                        (int)(r.getXyLower()[1]*((double)this.dimy/(double)this.dimyI)),
-                        (int)(r.getXyUpper()[0]*((double)this.dimx/(double)this.dimxI)),
-                        (int)(r.getXyUpper()[1]*((double)this.dimy/(double)this.dimyI))
+                        (int)(r.getXyLower()[0]*((double)this.dimx/(double)this.l.getDimxI())),
+                        (int)(r.getXyLower()[1]*((double)this.dimy/(double)this.l.getDimyI())),
+                        (int)(r.getXyUpper()[0]*((double)this.dimx/(double)this.l.getDimxI())),
+                        (int)(r.getXyUpper()[1]*((double)this.dimy/(double)this.l.getDimyI()))
                 );
             }
         }
@@ -72,7 +73,7 @@ class GameFrameMainPanel extends GamePanel{
 
         g2.drawString(String.valueOf(this.levelTime/100f),5,15);
 
-        for(RectObject r : this.objects){
+        for(RectObject r : this.l.getObjects()){
             if(r.isVisible()){
                 if(r.isWinner()){
                     g2.setColor(Color.GREEN);
@@ -91,7 +92,7 @@ class GameFrameMainPanel extends GamePanel{
     private Color c = Color.BLACK;
 
     //LEVEL INFO --------------------------------------------------------
-    private ArrayList<RectObject> objects = new ArrayList<>(){{
+    private Level l = new Level(new ArrayList<>(){{
         add(new RectObject(0,100,600,150,0f, false, true, 50, false, true,()->{
 
         }));
@@ -109,21 +110,12 @@ class GameFrameMainPanel extends GamePanel{
         add(new RectObject(500,500,600,600,0f, true, true, 15, false, true,()->{
 
         }));
+    }},new Point(50,50),false,1500,1000);
 
-    }};
 
-    private Point respawn = new Point(50,50);
-
-    private boolean playerKills = false;
     private Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
     private int dimx = screenSize.width;
     private int dimy = screenSize.height;
-
-    private int dimxI = 1500; //Ideal width
-    private int dimyI = 1000; //Ideal height
-
-
-
 
     //Player size set to 50
     //playerSize is up in the constructor under the super call
@@ -167,7 +159,7 @@ class GameFrameMainPanel extends GamePanel{
                 this.isPaused = false;
             }
 
-            if (isPlaying && this.playerKills){
+            if (isPlaying && this.l.isPlayerKills()){
                 killPlayer();
                 return;
             }
@@ -188,7 +180,7 @@ class GameFrameMainPanel extends GamePanel{
 
         collideWithWall();
 
-        for(RectObject r : this.objects){
+        for(RectObject r : this.l.getObjects()){
             if (collideWithBoxes(r)) return;
         }
 
@@ -301,8 +293,8 @@ class GameFrameMainPanel extends GamePanel{
 
 
     private void killPlayer(){
-        this.player.setLocx(this.respawn.x);
-        this.player.setLocy(this.respawn.y);
+        this.player.setLocx(this.l.getRespawn().x);
+        this.player.setLocy(this.l.getRespawn().y);
         this.player.setX(0);
         this.player.setY(0);
         this.isPaused = true;
