@@ -1,14 +1,22 @@
 package me.yoursole.main.game;
 
+import me.yoursole.main.game.gameValues.GameData;
 import me.yoursole.main.resources.Level;
+import me.yoursole.main.resources.Levels;
 import me.yoursole.main.resources.RectObject;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.util.ArrayList;
 
 public class GameFrame extends JFrame {
+
+
     GameFrameMainPanel p;
     public GameFrame(){
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -17,7 +25,9 @@ public class GameFrame extends JFrame {
         p = new GameFrameMainPanel();
         this.add(p);
         this.pack();
+        p.setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
 
+        p.setBackground(Color.GRAY);
     }
 }
 
@@ -52,65 +62,52 @@ class GameFrameMainPanel extends GamePanel{
         this.setPreferredSize(new Dimension(this.dimx, this.dimy));
 
 
-
-
-
+        super.startTick();
     }
 
     @Override
     public void paint(Graphics g) {
         super.paint(g);
+
         super.dimx = this.dimx;
         super.dimy = this.dimy;
 
         Graphics2D g2 = (Graphics2D) g;
+
+
+        for(RectObject r : this.l.getObjects()){
+            if(r.isVisible()){
+                Rectangle2D.Double rect = new Rectangle2D.Double(r.getXyLower()[0],r.getXyLower()[1],r.getXyUpper()[0]-r.getXyLower()[0],r.getXyUpper()[1]-r.getXyLower()[1]);
+                BufferedImage b = null;
+
+                try {
+                    b = ImageIO.read(r.getTexture());
+                } catch (IOException | IllegalArgumentException ignored) {}
+
+                Paint paint = b!=null?new TexturePaint(b, rect):new GradientPaint(0,0,Color.BLACK,1,1,r.isKills()?Color.RED:Color.BLUE);
+                g2.setPaint(paint);
+
+                g2.fill(rect);
+                g2.setPaint(null);
+                g2.setColor(Color.BLACK);
+
+            }
+
+        }
         g2.setColor(new Color((float) (.5*Math.sin(this.time/100f)+.5), (float) (.5*Math.cos(this.time/100f)+.5),1 ));
 
-        Ellipse2D.Double circle = new Ellipse2D.Double((int)(player.getLocx()-(player.getSize()/2)), (int)(player.getLocy()-(player.getSize()/2)), player.getSize(), player.getSize());
+        Ellipse2D.Double circle = new Ellipse2D.Double((int)(GameData.p.getLocx()-(GameData.p.getSize()/2)), (int)(GameData.p.getLocy()-(GameData.p.getSize()/2)), GameData.p.getSize(), GameData.p.getSize());
         g2.fill(circle);
 
         g2.setColor(Color.BLACK);
 
         g2.drawString(String.valueOf(this.levelTime/100f),5,15);
 
-        for(RectObject r : this.l.getObjects()){
-            if(r.isVisible()){
-                if(r.isWinner()){
-                    g2.setColor(Color.GREEN);
-                    g2.drawRect(r.getXyLower()[0],r.getXyLower()[1],r.getXyUpper()[0]-r.getXyLower()[0],r.getXyUpper()[1]-r.getXyLower()[1]);
-                    g2.setColor(Color.BLACK);
-                }else{
-                    g2.drawRect(r.getXyLower()[0],r.getXyLower()[1],r.getXyUpper()[0]-r.getXyLower()[0],r.getXyUpper()[1]-r.getXyLower()[1]);
-                }
-
-            }
-
-        }
-
     }
 
-    private Color c = Color.BLACK;
 
     //LEVEL INFO --------------------------------------------------------
-    private Level l = new Level(new ArrayList<>(){{
-        add(new RectObject(0,100,600,150,0f, false, true, 50, false, true,()->{
-
-        }));
-        add(new RectObject(620,100,1400,150,0f, false, true, 50, false, true,()->{
-
-        }));
-        add(new RectObject(1300,150,1400,1000,0f, false, true, 50, false, true,()->{
-
-        }));
-
-        add(new RectObject(1400,900,1500,1000,0f, false, false, 15, false, false,()->{
-            player.setY(player.getY()+5);
-        }));
-
-        add(new RectObject(500,500,600,600,0f, true, true, 15, false, true,()->{
-
-        }));
-    }},new Point(50,50),false,1500,1000);
+    private Level l = Levels.LEVEL1.getLevel(); //set to lvl 1
 
 
     private Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -136,8 +133,8 @@ class GameFrameMainPanel extends GamePanel{
         this.repaint();
 
 
-        this.player.setLocx((int) (this.player.getLocx()+this.player.getX()));
-        this.player.setLocy((int) (this.player.getLocy()+this.player.getY()));
+        GameData.p.setLocx((int) (GameData.p.getLocx()+GameData.p.getX()));
+        GameData.p.setLocy((int) (GameData.p.getLocy()+GameData.p.getY()));
 
         Point mouse = MouseInfo.getPointerInfo().getLocation();
 
@@ -149,12 +146,12 @@ class GameFrameMainPanel extends GamePanel{
 
 
         Point rel = new Point(mouse.x-window.x, mouse.y-window.y);
-        double centerX = this.player.getLocx();
-        double centerY = this.player.getLocy();
+        double centerX = GameData.p.getLocx();
+        double centerY = GameData.p.getLocy();
 
         //is cursor in circle
         float dist = distance(centerX, centerY, rel.getX(),rel.getY());
-        if(dist < this.player.getSize()/2f){
+        if(dist < GameData.p.getSize()/2f){
             if(this.isPaused){
                 this.isPaused = false;
             }
@@ -188,63 +185,62 @@ class GameFrameMainPanel extends GamePanel{
     }
 
     private void applyMovement(Point rel) {
-        float dx = this.player.getX();
-        float dy = this.player.getY();
+        float dx = GameData.p.getX();
+        float dy = GameData.p.getY();
 
-        dx += (distancex(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
-        dy += (distancey(this.player.getLocx(), this.player.getLocy(), rel.x, rel.y)/100);
+        dx += (distancex(GameData.p.getLocx(), GameData.p.getLocy(), rel.x, rel.y)/100);
+        dy += (distancey(GameData.p.getLocx(), GameData.p.getLocy(), rel.x, rel.y)/100);
 
         dx/=1.1;
         dy/=1.1;
 
-        this.player.setX(dx);
-        this.player.setY(dy);
+        GameData.p.setX(dx);
+        GameData.p.setY(dy);
     }
 
     private boolean collideWithBoxes(RectObject r) {
-        if(withinX(r, 0, this.player.getLocx())){
-            if(withinY(r.getXyLower(), 1, this.player.getLocy())){
+        if(withinX(r, 0, GameData.p.getLocx())){
+            if(withinY(r.getXyLower(), 1, GameData.p.getLocy())){
 
                 if (boxFunctions(r)) return true;
 
                 if(r.isCollidable()){
-                    this.player.setY(this.player.getY()*-1* r.getBouncyness());
-                    this.player.setLocy((int) (r.getXyLower()[1]-this.player.getSize()/2f));
+                    GameData.p.setY(GameData.p.getY()*-1* r.getBouncyness());
+                    GameData.p.setLocy((int) (r.getXyLower()[1]-GameData.p.getSize()/2f-this.compression));
                 }
 
             }
-            if(withinY(r.getXyUpper(), 1, this.player.getLocy())){
-
+            if(withinY(r.getXyUpper(), 1, GameData.p.getLocy())){
                 if (boxFunctions(r)) return true;
 
                 if(r.isCollidable()){
-                    this.player.setY(this.player.getY()*-1* r.getBouncyness());
-                    this.player.setLocy((int) (r.getXyUpper()[1]+this.player.getSize()/2f));
+                    GameData.p.setY(GameData.p.getY()*-1* r.getBouncyness());
+                    GameData.p.setLocy((int) (r.getXyUpper()[1]+GameData.p.getSize()/2f+this.compression));
                 }
 
             }
         }
 
 
-        if(withinX(r, 1, this.player.getLocy())){
-            if(withinY(r.getXyLower(), 0, this.player.getLocx())){
+        if(withinX(r, 1, GameData.p.getLocy())){
+            if(withinY(r.getXyLower(), 0, GameData.p.getLocx())){
 
                 if (boxFunctions(r)) return true;
 
                 if(r.isCollidable()){
-                    this.player.setX(this.player.getX()*-1* r.getBouncyness());
-                    this.player.setLocx((int) (r.getXyLower()[0]-this.player.getSize()/2f-this.compression));
+                    GameData.p.setX(GameData.p.getX()*-1* r.getBouncyness());
+                    GameData.p.setLocx((int) (r.getXyLower()[0]-GameData.p.getSize()/2f-this.compression));
                 }
 
 
             }
-            if(withinY(r.getXyUpper(), 0, this.player.getLocx())){
+            if(withinY(r.getXyUpper(), 0, GameData.p.getLocx())){
 
                 if (boxFunctions(r)) return true;
 
                 if(r.isCollidable()){
-                    this.player.setX(this.player.getX()*-1* r.getBouncyness());
-                    this.player.setLocx((int) (r.getXyUpper()[0]+this.player.getSize()/2f + this.compression));
+                    GameData.p.setX(GameData.p.getX()*-1* r.getBouncyness());
+                    GameData.p.setLocx((int) (r.getXyUpper()[0]+GameData.p.getSize()/2f + this.compression));
                 }
 
 
@@ -256,11 +252,17 @@ class GameFrameMainPanel extends GamePanel{
     private boolean boxFunctions(RectObject r) {
         if (r.isWinner()) {
             this.isPaused = true;
-            this.player.setX(0);
-            this.player.setY(0);
+            GameData.p.setX(0);
+            GameData.p.setY(0);
+
+            if(enumContains("LEVEL"+(this.l.getStage()+1))){
+                this.l = Levels.valueOf("LEVEL"+(this.l.getStage()+1)).getLevel();
+                killPlayer();
+                return true;
+            }
         }
         if (r.getSizeSet() != -1) {
-            this.player.setSize((int) (r.getSizeSet() * this.compression));
+            GameData.p.setSize((int) (r.getSizeSet() * this.compression));
         }
         if (r.isKills()) {
             killPlayer();
@@ -271,7 +273,7 @@ class GameFrameMainPanel extends GamePanel{
     }
 
     private boolean withinY(int[] xyLower, int i, double locx) {
-        return Math.abs(xyLower[i] - locx) < this.player.getSize() / 2f;
+        return Math.abs(xyLower[i] - locx) < GameData.p.getSize() / 2f;
     }
 
     private boolean withinX(RectObject r, int i, double locx) {
@@ -279,29 +281,38 @@ class GameFrameMainPanel extends GamePanel{
     }
 
     private void collideWithWall() {
-        float halfSize = player.getSize()/2f;
-        if(this.player.getLocx()+halfSize>=this.dimx || this.player.getLocx() - halfSize < 0){ //side wall
-            this.player.setX(this.player.getX()*-1);
-            this.player.setLocx(this.player.getLocx()<this.dimx/2f? (int) (this.player.getSize() / 2f) : (int) (this.dimx - this.player.getSize() / 2f));
+        float halfSize = GameData.p.getSize()/2f;
+        if(GameData.p.getLocx()+halfSize>=this.dimx || GameData.p.getLocx() - halfSize < 0){ //side wall
+            GameData.p.setX(GameData.p.getX()*-1);
+            GameData.p.setLocx(GameData.p.getLocx()<this.dimx/2f? (int) (GameData.p.getSize() / 2f+(this.compression)) : (int) (this.dimx - GameData.p.getSize() / 2f-(this.compression)));
         }
 
-        if(this.player.getLocy()+halfSize>=this.dimy || this.player.getLocy() - halfSize < 0){ //top/bottom wall
-            this.player.setY(this.player.getY()*-1);
-            this.player.setLocy((int) (this.player.getLocy()<this.dimy/2f?this.player.getSize()/2f+(this.compression):this.dimy-this.player.getSize()/2f-(this.compression)));
+        if(GameData.p.getLocy()+halfSize>=this.dimy || GameData.p.getLocy() - halfSize < 0){ //top/bottom wall
+            GameData.p.setY(GameData.p.getY()*-1);
+            GameData.p.setLocy((int) (GameData.p.getLocy()<this.dimy/2f?GameData.p.getSize()/2f+(this.compression):this.dimy-GameData.p.getSize()/2f-(this.compression)));
         }
     }
 
 
     private void killPlayer(){
-        this.player.setLocx(this.l.getRespawn().x);
-        this.player.setLocy(this.l.getRespawn().y);
-        this.player.setX(0);
-        this.player.setY(0);
+        GameData.p.setLocx(this.l.getRespawn().x);
+        GameData.p.setLocy(this.l.getRespawn().y);
+        GameData.p.setX(0);
+        GameData.p.setY(0);
         this.isPaused = true;
         this.isPlaying = false;
         this.levelTime = 0;
 
-        this.player.setSize((int) (this.player.getDefaultSize() * this.compression));
+        GameData.p.setSize((int) (GameData.p.getDefaultSize() * this.compression));
+    }
+
+    private static boolean enumContains(String input) {
+        for (Levels r : Levels.values()) {
+            if (r.name().equalsIgnoreCase(input)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private float distance(double x, double y, double x2, double y2){

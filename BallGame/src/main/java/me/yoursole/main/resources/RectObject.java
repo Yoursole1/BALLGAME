@@ -1,6 +1,10 @@
 package me.yoursole.main.resources;
 
-public class RectObject{
+import java.io.File;
+import java.io.Serializable;
+import java.lang.invoke.SerializedLambda;
+
+public class RectObject implements Serializable {
     private int[] xyLower;
     private int[] xyUpper;
 
@@ -12,8 +16,9 @@ public class RectObject{
     private boolean isCollidable;
 
     private Runnable r;
+    private File texture;
 
-    public RectObject(int x1, int y1, int x2, int y2, float bouncyness, boolean isWinner, boolean isVisible, int sizeSet, boolean kills, boolean isCollidable, Runnable custom){
+    public RectObject(int x1, int y1, int x2, int y2, float bouncyness, boolean isWinner, boolean isVisible, int sizeSet, boolean kills, boolean isCollidable, Runnable custom, String texturePath){
         this.xyLower = new int[]{x1, y1};
         this.xyUpper = new int[]{x2, y2};
 
@@ -25,13 +30,20 @@ public class RectObject{
         this.isCollidable = isCollidable;
 
         this.r = custom;
+
+        if(!texturePath.equals(""))
+            this.texture = new File(texturePath);
+        else
+            this.texture = null;
     }
 
     public void setXys(int x1, int y1, int x2, int y2){
         this.xyLower = new int[]{x1, y1};
         this.xyUpper = new int[]{x2, y2};
     }
-
+    public File getTexture(){
+        return this.texture;
+    }
     public int[] getXyLower(){
         return this.xyLower;
     }
