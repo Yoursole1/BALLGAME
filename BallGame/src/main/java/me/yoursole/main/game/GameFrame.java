@@ -94,7 +94,12 @@ class GameFrameMainPanel extends GamePanel{
             }
 
         }
-        g2.setColor(new Color((float) (.5*Math.sin(this.time/100f)+.5), (float) (.5*Math.cos(this.time/100f)+.5),1 ));
+
+        float dist = distance(this.rel.x, this.rel.y, GameData.p.getLocx(), GameData.p.getLocy());
+        float red = (float) (-1/(1+Math.pow(Math.E,dist/50-10)))+1;
+        float green = (float) (1/(1+Math.pow(Math.E,dist/25-10)));
+
+        g2.setColor(new Color(red, green, .5f));
 
         Ellipse2D.Double circle = new Ellipse2D.Double((int)(GameData.p.getLocx()-(GameData.p.getSize()/2)), (int)(GameData.p.getLocy()-(GameData.p.getSize()/2)), GameData.p.getSize(), GameData.p.getSize());
         g2.fill(circle);
@@ -123,6 +128,8 @@ class GameFrameMainPanel extends GamePanel{
 
     private long time = 0;
     private long levelTime = 0;
+
+    Point rel = new Point();
     @Override
     public void onTick() {
 
@@ -145,7 +152,7 @@ class GameFrameMainPanel extends GamePanel{
 
 
 
-        Point rel = new Point(mouse.x-window.x, mouse.y-window.y);
+        this.rel = new Point(mouse.x-window.x, mouse.y-window.y);
         double centerX = GameData.p.getLocx();
         double centerY = GameData.p.getLocy();
 
