@@ -1,9 +1,7 @@
 package me.yoursole.main.game;
 
 import me.yoursole.main.game.gameValues.GameData;
-import me.yoursole.main.resources.Level;
-import me.yoursole.main.resources.Levels;
-import me.yoursole.main.resources.RectObject;
+import me.yoursole.main.resources.*;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -50,13 +48,18 @@ class GameFrameMainPanel extends GamePanel{
             this.dimy *= this.compression;
 
 
-            for(RectObject r : this.l.getObjects()){ //scale rectangles to match screensize
-                r.setXys(
-                        (int)(r.getXyLower()[0]*((double)this.dimx/(double)this.l.getDimxI())),
-                        (int)(r.getXyLower()[1]*((double)this.dimy/(double)this.l.getDimyI())),
-                        (int)(r.getXyUpper()[0]*((double)this.dimx/(double)this.l.getDimxI())),
-                        (int)(r.getXyUpper()[1]*((double)this.dimy/(double)this.l.getDimyI()))
-                );
+            for(GameObject o : this.l.getObjects()){ //scale rectangles to match screensize
+                if(o.getClass() == RectObject.class){
+                    RectObject r = (RectObject) o;
+
+                    r.setXys(
+                            (int)(r.getXyLower()[0]*((double)this.dimx/(double)this.l.getDimxI())),
+                            (int)(r.getXyLower()[1]*((double)this.dimy/(double)this.l.getDimyI())),
+                            (int)(r.getXyUpper()[0]*((double)this.dimx/(double)this.l.getDimxI())),
+                            (int)(r.getXyUpper()[1]*((double)this.dimy/(double)this.l.getDimyI()))
+                    );
+                }
+
             }
         }
         this.setPreferredSize(new Dimension(this.dimx, this.dimy));
@@ -75,31 +78,41 @@ class GameFrameMainPanel extends GamePanel{
         Graphics2D g2 = (Graphics2D) g;
 
 
-        for(RectObject r : this.l.getObjects()){
-            if(r.isVisible()){
-                Rectangle2D.Double rect = new Rectangle2D.Double(r.getXyLower()[0],r.getXyLower()[1],r.getXyUpper()[0]-r.getXyLower()[0],r.getXyUpper()[1]-r.getXyLower()[1]);
-                BufferedImage b = null;
+        for(GameObject o : this.l.getObjects()){
+            if(o.getClass() == RectObject.class){
+                RectObject r = (RectObject) o;
 
-                try {
-                    b = ImageIO.read(r.getTexture());
-                } catch (IOException | IllegalArgumentException ignored) {}
+                if(r.isVisible()){
+                    Rectangle2D.Double rect = new Rectangle2D.Double(r.getXyLower()[0],r.getXyLower()[1],r.getXyUpper()[0]-r.getXyLower()[0],r.getXyUpper()[1]-r.getXyLower()[1]);
+                    BufferedImage b = null;
 
-                Paint paint = b!=null?new TexturePaint(b, rect):new GradientPaint(0,0,Color.BLACK,1,1,r.isKills()?Color.RED:Color.BLUE);
-                g2.setPaint(paint);
+                    try {
+                        b = ImageIO.read(r.getTexture());
+                    } catch (IOException | IllegalArgumentException ignored) {}
 
-                g2.fill(rect);
-                g2.setPaint(null);
-                g2.setColor(Color.BLACK);
+                    Paint paint = b!=null?new TexturePaint(b, rect):new GradientPaint(0,0,Color.BLACK,1,1,r.isKills()?Color.RED:Color.BLUE);
+                    g2.setPaint(paint);
 
+                    g2.fill(rect);
+                    g2.setPaint(null);
+                    g2.setColor(Color.BLACK);
+
+                }
             }
 
         }
+        if(!this.isPaused){
+            float dist = distance(this.rel.x, this.rel.y, GameData.p.getLocx(), GameData.p.getLocy());
+            float red = (float) (-1/(1+Math.pow(Math.E,dist/50-10)))+1;
+            float green = (float) (1/(1+Math.pow(Math.E,dist/25-10)));
 
-        float dist = distance(this.rel.x, this.rel.y, GameData.p.getLocx(), GameData.p.getLocy());
-        float red = (float) (-1/(1+Math.pow(Math.E,dist/50-10)))+1;
-        float green = (float) (1/(1+Math.pow(Math.E,dist/25-10)));
+            g2.setColor(new Color(red, green, .5f));
+        }else{
+            g2.setColor(Color.GREEN);
+        }
 
-        g2.setColor(new Color(red, green, .5f));
+
+
 
         Ellipse2D.Double circle = new Ellipse2D.Double((int)(GameData.p.getLocx()-(GameData.p.getSize()/2)), (int)(GameData.p.getLocy()-(GameData.p.getSize()/2)), GameData.p.getSize(), GameData.p.getSize());
         g2.fill(circle);
@@ -108,6 +121,7 @@ class GameFrameMainPanel extends GamePanel{
 
         g2.drawString(String.valueOf(this.levelTime/100f),5,15);
 
+
     }
 
 
@@ -115,7 +129,7 @@ class GameFrameMainPanel extends GamePanel{
     private Level l = Levels.LEVEL1.getLevel(); //set to lvl 1
 
 
-    private Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    private final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
     private int dimx = screenSize.width;
     private int dimy = screenSize.height;
 
@@ -140,8 +154,8 @@ class GameFrameMainPanel extends GamePanel{
         this.repaint();
 
 
-        GameData.p.setLocx((int) (GameData.p.getLocx()+GameData.p.getX()));
-        GameData.p.setLocy((int) (GameData.p.getLocy()+GameData.p.getY()));
+        GameData.p.setLocx((int) (GameData.p.getLocx()+GameData.p.getMovement().getX()));
+        GameData.p.setLocy((int) (GameData.p.getLocy()+GameData.p.getMovement().getY()));
 
         Point mouse = MouseInfo.getPointerInfo().getLocation();
 
@@ -184,16 +198,16 @@ class GameFrameMainPanel extends GamePanel{
 
         collideWithWall();
 
-        for(RectObject r : this.l.getObjects()){
-            if (collideWithBoxes(r)) return;
+        for(GameObject r : this.l.getObjects()){
+            if (collideWithObject(r)) return;
         }
 
 
     }
 
     private void applyMovement(Point rel) {
-        float dx = GameData.p.getX();
-        float dy = GameData.p.getY();
+        float dx = GameData.p.getMovement().getX();
+        float dy = GameData.p.getMovement().getY();
 
         dx += (distancex(GameData.p.getLocx(), GameData.p.getLocy(), rel.x, rel.y)/100);
         dy += (distancey(GameData.p.getLocx(), GameData.p.getLocy(), rel.x, rel.y)/100);
@@ -201,66 +215,84 @@ class GameFrameMainPanel extends GamePanel{
         dx/=1.1;
         dy/=1.1;
 
-        GameData.p.setX(dx);
-        GameData.p.setY(dy);
+        GameData.p.getMovement().setX(dx);
+        GameData.p.getMovement().setY(dy);
     }
 
-    private boolean collideWithBoxes(RectObject r) {
-        if(withinX(r, 0, GameData.p.getLocx())){
-            if(withinY(r.getXyLower(), 1, GameData.p.getLocy())){
+    private boolean collideWithObject(GameObject r) {
+        if(!r.compute()) //for backgrounds and sprites
+            return false;
 
-                if (boxFunctions(r)) return true;
+        ArrayList<Point> pointsInsidePlayer = GameData.p.getPointsInside();
 
-                if(r.isCollidable()){
-                    GameData.p.setY(GameData.p.getY()*-1* r.getBouncyness());
-                    GameData.p.setLocy((int) (r.getXyLower()[1]-GameData.p.getSize()/2f-this.compression));
+        Vector playerVel = GameData.p.getMovement(),
+                b = new Vector(0,0),
+                bouncy = new Vector(r.getBouncyness(),r.getBouncyness()),
+                centerOfPlayer = new Vector((float)GameData.p.getLocx(),(float)GameData.p.getLocy());
+
+        int amountOfPointsInPlayerAndObject = 0;
+        ArrayList<Point> pointsInPlayerAndObject = new ArrayList<>();
+        for(Point p : pointsInsidePlayer){
+            if(r.insideObject(p)){ //point is inside both the player and the object in question
+                Vector pointCenter = Vector.subtract(centerOfPlayer, new Vector(p.x,p.y));
+                b.add(pointCenter);
+                amountOfPointsInPlayerAndObject++;
+                pointsInPlayerAndObject.add(p);
+            }
+        }
+
+        if(amountOfPointsInPlayerAndObject!=0){
+            if(r.isCollidable()){
+
+                //player location
+
+                float minDist = Integer.MAX_VALUE;
+
+                for(Point p : pointsInPlayerAndObject){
+                    float d = distanceSquared(p.x,p.y,GameData.p.getLocx(),GameData.p.getLocy());
+                    if(d<minDist){
+                        minDist = d;
+                    }
                 }
+                minDist = (float) Math.sqrt(minDist);
+                minDist = (float) ((GameData.p.getSize()/2f - minDist)/this.compression);
+
+                b.normalize();
+
+                b.multElements(new Vector(minDist,minDist));
+
+
+                Vector playerLoc = new Vector((float)GameData.p.getLocx(), (float)GameData.p.getLocy());
+                playerLoc.add(b);
+
+                GameData.p.setLocx((int)(playerLoc.getX()));
+                GameData.p.setLocy((int)(playerLoc.getY()));
+                b.normalize();
+                //player velocity
+                b.makeNeg();
+
+                playerVel.multElements(b);
+                playerVel.multElements(bouncy);
+
+
+                GameData.p.setMovement(playerVel);
+
 
             }
-            if(withinY(r.getXyUpper(), 1, GameData.p.getLocy())){
-                if (boxFunctions(r)) return true;
-
-                if(r.isCollidable()){
-                    GameData.p.setY(GameData.p.getY()*-1* r.getBouncyness());
-                    GameData.p.setLocy((int) (r.getXyUpper()[1]+GameData.p.getSize()/2f+this.compression));
-                }
-
-            }
+            boxFunctions(r);
         }
 
 
-        if(withinX(r, 1, GameData.p.getLocy())){
-            if(withinY(r.getXyLower(), 0, GameData.p.getLocx())){
-
-                if (boxFunctions(r)) return true;
-
-                if(r.isCollidable()){
-                    GameData.p.setX(GameData.p.getX()*-1* r.getBouncyness());
-                    GameData.p.setLocx((int) (r.getXyLower()[0]-GameData.p.getSize()/2f-this.compression));
-                }
 
 
-            }
-            if(withinY(r.getXyUpper(), 0, GameData.p.getLocx())){
-
-                if (boxFunctions(r)) return true;
-
-                if(r.isCollidable()){
-                    GameData.p.setX(GameData.p.getX()*-1* r.getBouncyness());
-                    GameData.p.setLocx((int) (r.getXyUpper()[0]+GameData.p.getSize()/2f + this.compression));
-                }
-
-
-            }
-        }
         return false;
     }
 
-    private boolean boxFunctions(RectObject r) {
+    private boolean boxFunctions(GameObject r) {
         if (r.isWinner()) {
             this.isPaused = true;
-            GameData.p.setX(0);
-            GameData.p.setY(0);
+            GameData.p.getMovement().setX(0);
+            GameData.p.getMovement().setY(0);
 
             if(enumContains("LEVEL"+(this.l.getStage()+1))){
                 this.l = Levels.valueOf("LEVEL"+(this.l.getStage()+1)).getLevel();
@@ -270,6 +302,7 @@ class GameFrameMainPanel extends GamePanel{
         }
         if (r.getSizeSet() != -1) {
             GameData.p.setSize((int) (r.getSizeSet() * this.compression));
+            GameData.p.resetSavedPoints(); //recalc basis vectors for all points inside circle
         }
         if (r.isKills()) {
             killPlayer();
@@ -279,23 +312,15 @@ class GameFrameMainPanel extends GamePanel{
         return false;
     }
 
-    private boolean withinY(int[] xyLower, int i, double locx) {
-        return Math.abs(xyLower[i] - locx) < GameData.p.getSize() / 2f;
-    }
-
-    private boolean withinX(RectObject r, int i, double locx) {
-        return withinY(r.getXyLower(), i, locx) || locx > r.getXyLower()[i] && locx < r.getXyUpper()[i];
-    }
-
     private void collideWithWall() {
         float halfSize = GameData.p.getSize()/2f;
         if(GameData.p.getLocx()+halfSize>=this.dimx || GameData.p.getLocx() - halfSize < 0){ //side wall
-            GameData.p.setX(GameData.p.getX()*-1);
+            GameData.p.getMovement().setX(GameData.p.getMovement().getX()*-1);
             GameData.p.setLocx(GameData.p.getLocx()<this.dimx/2f? (int) (GameData.p.getSize() / 2f+(this.compression)) : (int) (this.dimx - GameData.p.getSize() / 2f-(this.compression)));
         }
 
         if(GameData.p.getLocy()+halfSize>=this.dimy || GameData.p.getLocy() - halfSize < 0){ //top/bottom wall
-            GameData.p.setY(GameData.p.getY()*-1);
+            GameData.p.getMovement().setY(GameData.p.getMovement().getY()*-1);
             GameData.p.setLocy((int) (GameData.p.getLocy()<this.dimy/2f?GameData.p.getSize()/2f+(this.compression):this.dimy-GameData.p.getSize()/2f-(this.compression)));
         }
     }
@@ -304,8 +329,8 @@ class GameFrameMainPanel extends GamePanel{
     private void killPlayer(){
         GameData.p.setLocx(this.l.getRespawn().x);
         GameData.p.setLocy(this.l.getRespawn().y);
-        GameData.p.setX(0);
-        GameData.p.setY(0);
+        GameData.p.getMovement().setX(0);
+        GameData.p.getMovement().setY(0);
         this.isPaused = true;
         this.isPlaying = false;
         this.levelTime = 0;
@@ -324,6 +349,10 @@ class GameFrameMainPanel extends GamePanel{
 
     private float distance(double x, double y, double x2, double y2){
         return (float) Math.sqrt(Math.pow(y2-y,2)+Math.pow(x2-x,2));
+    }
+
+    private float distanceSquared(double x, double y, double x2, double y2){
+        return (float) ((float) Math.pow(y2-y,2)+Math.pow(x2-x,2));
     }
 
     private float distancex(double x, double y, double x2, double y2){

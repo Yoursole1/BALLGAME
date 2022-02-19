@@ -5,18 +5,18 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 public class Level implements Serializable {
-    private ArrayList<RectObject> objects;
+    private ArrayList<? extends GameObject> objects;
     private Point respawn;
     private boolean playerKills;
     private int dimxI;
 
     private int stage;
 
-    public ArrayList<RectObject> getObjects() {
+    public ArrayList<? extends GameObject> getObjects() {
         return objects;
     }
 
-    public void setObjects(ArrayList<RectObject> objects) {
+    public void setObjects(ArrayList<? extends GameObject> objects) {
         this.objects = objects;
     }
 
@@ -56,7 +56,7 @@ public class Level implements Serializable {
     }
     private int dimyI;
 
-    public Level(ArrayList<RectObject> objects, Point respawn, boolean playerKills, int dimxI, int dimyI, int stage){
+    public Level(ArrayList<? extends GameObject> objects, Point respawn, boolean playerKills, int dimxI, int dimyI, int stage){
         this.objects = objects;
         this.respawn = respawn;
         this.playerKills = playerKills;
